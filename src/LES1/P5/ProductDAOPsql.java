@@ -59,7 +59,6 @@ public class ProductDAOPsql implements ProductDAO {
 
     @Override
     public boolean update(Product product) {
-
 //       De update functie is niet heel erg uitgebreid of complex, maar als standaard heb ik genomen dat de prijs van het product met 5 word verhoogd
 
         String SQL =  "UPDATE product SET prijs = prijs + 5 WHERE product_nummer = ?";
@@ -67,18 +66,30 @@ public class ProductDAOPsql implements ProductDAO {
 //        Ik nam aan dat "last update" in de koppel tabel stond voor wanneer een product of ovchipkaart voor het laatst is veranderd/geupdate
 //        En ik verander de prijs van een product, dus dan moet in de koppel tabel de "last update" upgedate worden op de plekken met dat zelfde product nummer
 
-        String SQL2 = "UPDATE ov_chipkaart_product SET last_update = ? WHERE product_nummer = ?";
+        String SQL2 = "DELETE FROM ov_chipkaart_product WHERE product_nummer = ?";
+        String SQL3 = "INSERT INTO ov_chipkaart_product VALUES (?, ?, ?, ?)";
+
 
         try {
             PreparedStatement prestat = conn.prepareStatement(SQL);
             PreparedStatement prestat2 = conn.prepareStatement(SQL2);
 
             prestat.setInt(1, product.getProduct_nummer());
-            prestat2.setDate(1, Date.valueOf(LocalDate.now()));
-            prestat2.setInt(2, product.getProduct_nummer());
+            prestat2.setInt(1, product.getProduct_nummer());
 
             prestat.executeUpdate();
             prestat2.executeUpdate();
+
+            for (OVChipkaart o : product.getOVChipkaarten()) {
+                PreparedStatement prestat3 = conn.prepareStatement(SQL3);
+                prestat3.setInt(1, o.getKaart_nummer());
+                prestat3.setInt(2, product.getProduct_nummer());
+                prestat3.setString(3, "actief");
+                prestat3.setDate(4, Date.valueOf(LocalDate.now()));
+
+                prestat3.executeUpdate();
+            }
+
             return true;
 
         } catch (SQLException throwables) {
@@ -100,8 +111,9 @@ public class ProductDAOPsql implements ProductDAO {
             prestat.setInt(1, product.getProduct_nummer());
             prestat2.setInt(1, product.getProduct_nummer());
 
-            prestat.executeUpdate();
             prestat2.executeUpdate();
+            prestat.executeUpdate();
+
             return true;
 
         } catch (SQLException throwables) {
@@ -182,7 +194,6 @@ public class ProductDAOPsql implements ProductDAO {
                 OVChipkaart ov = new OVChipkaart(knm, geldigTot, klasse, saldo, rid);
 
                 Product pr = new Product(prnr, nm, besch, prijs);
-
 
 
                 for(Product p : producten){
